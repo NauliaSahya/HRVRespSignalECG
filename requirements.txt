@@ -1,0 +1,6 @@
+numpy
+math
+streamlit
+pandas
+altair
+ipywidgets
