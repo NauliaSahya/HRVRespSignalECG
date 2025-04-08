@@ -498,8 +498,8 @@ def compute_hr(RR_intervals):
 def main():
     st.sidebar.title("Non Stationary Signal 📚")
     selected_option = st.sidebar.selectbox("Choose an option", ["Mallat Algorithm Theory", "Filter Bank Theory", "HRV dan Resp Signal"])
-    ecg = read_data('D:\\Coolyeah\\Sem6\\ASN\\FP1\\samples.txt')
-    resp = read_data('D:\\Coolyeah\\Sem6\\ASN\\FP1\\samples.txt', type="resp")
+    ecg = read_data('samples.txt')
+    resp = read_data('samples.txt', type="resp")
 
     if selected_option == "Mallat Algorithm Theory":
         st.title("Mallat Algorithm")
