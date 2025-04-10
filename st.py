@@ -513,12 +513,12 @@ def main():
         df_g = pd.DataFrame({"n": n_list, "g(n)": g})
         col1, col2 = st.columns(2)
         with col1:
-            st.subheader("h(n)")
-            st.altair_chart(plot_bar_chart(df_h, "h(n) Coefficients", "n", "Amplitude"))
+            st.subheader("h[n]")
+            st.altair_chart(plot_bar_chart(df_h, "h[n] Coefficients", "n", "Amplitude"))
 
         with col2:
-            st.subheader("g(n)")
-            st.altair_chart(plot_bar_chart(df_g, "g(n) Coefficients", "n", "Amplitude"))
+            st.subheader("g[n]")
+            st.altair_chart(plot_bar_chart(df_g, "g[n] Coefficients", "n", "Amplitude"))
         # Freq response Hw (LPF) & Gw (HPF)       
         i_list = i_list[:round(fs/2)]
         hHw = Hw[:round(fs/2)]
