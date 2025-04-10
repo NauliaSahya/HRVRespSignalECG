@@ -89,7 +89,7 @@ def mallat(ecg, h, g):
                     pass
     return w2fm, s2fm
 
-def fr_fillbank(Gw, Hw, fs):
+def fr_filbank(Gw, Hw, fs):
     Q = np.zeros((9, round(fs/2)+1))
     i_list = list(range(0, round(fs/2)+1))
     for i in i_list:
@@ -431,7 +431,7 @@ def plot_grid(data1, title=None, data2=None, data3=None, data4=None, label1="Sig
             .mark_line()
             .encode(
                 x=alt.X("Sequence (s)", title="Sequence (s)", axis=alt.Axis(grid=True)),
-                y=alt.Y("HR (bpm)", title="HR (bpm)", axis=alt.Axis(grid=True,tickMinStep=0.01), scale=alt.Scale(domain=[min(data1)+20, max(data1)]+20))
+                y=alt.Y("HR (bpm)", title="HR (bpm)", axis=alt.Axis(grid=True,tickMinStep=0.01), scale=alt.Scale(domain=[min(data1)-20, max(data1)]+20))
             )
             .properties(width=1000, height = 300)
         )
@@ -713,7 +713,7 @@ def main():
                 thresout[3][n] == 1.5):
                 # thresout[4][n] == 1.5 and 
                 # thresout[5][n] == 1.5):
-                rpeak[n-3] = 1
+                rpeak[n-3] = 1 #T3-T1
             else:
                 rpeak[n-3] = 0
 
