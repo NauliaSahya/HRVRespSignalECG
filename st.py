@@ -89,7 +89,7 @@ def mallat(ecg, h, g):
                     pass
     return w2fm, s2fm
 
-def fr_mallat(Gw, Hw, fs):
+def fr_fillbank(Gw, Hw, fs):
     Q = np.zeros((9, round(fs/2)+1))
     i_list = list(range(0, round(fs/2)+1))
     for i in i_list:
@@ -400,7 +400,7 @@ def plot_grid(data1, title=None, data2=None, data3=None, data4=None, label1="Sig
             .mark_line()
             .encode(
                 x=alt.X("Time (s)", title="Time (s)", axis=alt.Axis(grid=True)),
-                y=alt.Y("Amplitude", title="Amplitude", axis=alt.Axis(grid=True)),
+                y=alt.Y("Amplitude", title="Amplitude", axis=alt.Axis(grid=True), scale=alt.Scale(domain=[min(yser), max(yser)])),
                 color="Signal Type:N"
             )
             .properties(width=width, height = height)
@@ -415,7 +415,7 @@ def plot_grid(data1, title=None, data2=None, data3=None, data4=None, label1="Sig
             .mark_line()
             .encode(
                 x=alt.X("Freq (Hz)", title="Freq (Hz)", axis=alt.Axis(grid=True)),
-                y=alt.Y("Magnitude", title="Magnitude", axis=alt.Axis(grid=True))
+                y=alt.Y("Magnitude", title="Magnitude", axis=alt.Axis(grid=True), scale=alt.Scale(domain=[min(yser), max(yser)]))
             )
             .properties(width=1000, height = 500)
         )
@@ -431,7 +431,7 @@ def plot_grid(data1, title=None, data2=None, data3=None, data4=None, label1="Sig
             .mark_line()
             .encode(
                 x=alt.X("Sequence (s)", title="Sequence (s)", axis=alt.Axis(grid=True)),
-                y=alt.Y("HR (bpm)", title="HR (bpm)", axis=alt.Axis(grid=True))
+                y=alt.Y("HR (bpm)", title="HR (bpm)", axis=alt.Axis(grid=True,tickMinStep=0.01), scale=alt.Scale(domain=[min(data1), max(data1)]))
             )
             .properties(width=1000, height = 300)
         )
@@ -496,10 +496,11 @@ def compute_hr(RR_intervals):
 
 
 def main():
+    st.sidebar.title("FP ASN Kelompok 2")
     st.sidebar.title("Non Stationary Signal 📚")
     selected_option = st.sidebar.selectbox("Choose an option", ["Mallat Algorithm Theory", "Filter Bank Theory", "HRV dan Resp Signal"])
-    ecg = read_data('samples.txt')
-    resp = read_data('samples.txt', type="resp")
+    ecg = read_data('D:\\Coolyeah\\Sem6\\ASN\\FP1\\samples.txt')
+    resp = read_data('D:\\Coolyeah\\Sem6\\ASN\\FP1\\samples.txt', type="resp")
 
     if selected_option == "Mallat Algorithm Theory":
         st.title("Mallat Algorithm")
@@ -551,8 +552,13 @@ def main():
                 plot_grid(s2fm[i, :1250], "", jenis="ecg2", kolom="1", label1=f"s2f{i+1}")
                 # st.line_chart(s2fm[i, :1250])  # Menampilkan s2f
 
+
+    elif selected_option == "Filter Bank Theory":
+        st.title("Filter Bank")
         # Freq Response
-        Q = fr_mallat(Gw, Hw, fs)
+        h, g, n_list = hg_list()
+        Hw, Gw, i_list = hwgw_freq(h, g)
+        Q = fr_fillbank(Gw, Hw, fs)
         st.subheader("Frequency Response")
         checkbox_values = []
         cols = st.columns(8)  
@@ -560,19 +566,25 @@ def main():
             with cols[i-1]:
                 checkbox_values.append(st.checkbox(f"Q{i}", value=True))
 
-        if any(checkbox_values):  
+        if any(checkbox_values):
             selected_Q = []
+            labels = []
             for i in range(1, 9):
-                if checkbox_values[i-1]: 
-                    selected_Q.append(Q[i])
-            st.line_chart(np.array(selected_Q).T)
+                if checkbox_values[i - 1]:
+                    selected_Q.append(Q[i - 1])
+                    labels.append(f"Q{i}")
+
+            freq = np.linspace(0, round(fs/2), len(Q[0])) 
+            df = pd.DataFrame(np.array(selected_Q).T, columns=labels)
+            df.index = freq
+            df.index.name = "Frequency (Hz)"
+
+            st.line_chart(df)
         else:
             st.write("No frequency response selected.")
         st.write("**X-Axis:** Frequency (Hz)")
         st.write("**Y-Axis:** Magnitude")
 
-    elif selected_option == "Filter Bank Theory":
-        st.title("Filter Bank")
         qj = {}
         delays = {}  
         for j in range(1, 9):
@@ -711,25 +723,32 @@ def main():
         RR = detect_rpeak(rpeak)  # Ambil waktu deteksi R-peak
         RR_intervals = compute_rr_intervals(RR)  # Hitung RR Interval
         HR = compute_hr(RR_intervals)  # Hitung HR dalam bpm
-
-        fs_HRV = 1 / np.mean(RR_intervals) if RR_intervals else 1  # Sampling rate HRV
+        meanRR = sum(RR_intervals)/len(RR_intervals)
+        fs_HRV = 1 / meanRR if RR_intervals else 1  # Sampling rate HRV
         sequence_time = np.arange(len(HR)) / fs_HRV  # Waktu sequence (detik)
         st.write("**RR (s):**", RR)
         st.write("**RR Intervals (s):**", RR_intervals)
         st.write("**HR (Bpm):**", HR)
-        st.write("**Mean RR Intervals (s):**", np.mean(RR_intervals))
+        st.write("**Mean RR Intervals (s):**", meanRR)
         st.write("**fs HRV:**", fs_HRV)
+        st.write("**Sequence(s):**", sequence_time)
         st.subheader("Heart Rate Variability (HRV)")
         plot_grid(HR, "HRV Plot", jenis="hrv", kolom="1", timev=sequence_time)
 
         st.subheader("Respiratory Signal Using DWT Scale 8")
         respi = np.zeros(len(ecg))
+        respi2 = np.zeros(len(ecg))
         for i in range (T8,128*10):
             respi[i-T8]=w2fb[8][i]
+            respi2[i-T8]= respi[i-T8]*20
 
         # plot_grid(w2fb[8], "Orde 8", data2=resp)
         plot_grid(respi, "ECG-Derived Respiratory (Scale 8)", label1="DWT Scale 8")
         plot_grid(resp, "Respiratory Signal", label1="Resp Signal")
+        st.subheader("Comparing Signal")
+        st.write("Note: The amplitude of DWT scale 8 is magnified 20 times.")
+        plot_grid(resp, label1="Resp Signal", data2=respi2, label2="DWT Scale 8", kolom="1")
+        
 
 
 
