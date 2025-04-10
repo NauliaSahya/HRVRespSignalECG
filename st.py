@@ -431,7 +431,7 @@ def plot_grid(data1, title=None, data2=None, data3=None, data4=None, label1="Sig
             .mark_line()
             .encode(
                 x=alt.X("Sequence (s)", title="Sequence (s)", axis=alt.Axis(grid=True)),
-                y=alt.Y("HR (bpm)", title="HR (bpm)", axis=alt.Axis(grid=True,tickMinStep=0.01), scale=alt.Scale(domain=[min(data1)-20, max(data1)]+20))
+                y=alt.Y("HR (bpm)", title="HR (bpm)", axis=alt.Axis(grid=True,tickMinStep=0.01), scale=alt.Scale(domain=[min(data1)/2, 2*max(data1)]))
             )
             .properties(width=1000, height = 300)
         )
