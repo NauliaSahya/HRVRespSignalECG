@@ -572,7 +572,7 @@ def main():
             for i in range(1, 9):
                 if checkbox_values[i-1]:
                     selected_Q.append(Q[i])
-                    labels.append(f"Q{i-1}")
+                    labels.append(f"Q{i}")
 
             freq = np.linspace(0, round(fs/2), len(Q[0])) 
             df = pd.DataFrame(np.array(selected_Q).T, columns=labels)
