@@ -570,7 +570,7 @@ def main():
             selected_Q = []
             labels = []
             for i in range(1, 9):
-                if checkbox_values[i]:
+                if checkbox_values[i-1]:
                     selected_Q.append(Q[i])
                     labels.append(f"Q{i-1}")
 
