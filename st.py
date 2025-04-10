@@ -455,7 +455,7 @@ def plot_bar_chart(df, title, x_label, y_label, width=500):
             x=alt.X("n:O", title=x_label),
             y=alt.Y(df.columns[1], title=y_label)
         )
-        .properties(width=width, height=300, title=title)
+        .properties(width=500, height=300, title=title)
     )
     return chart
 
@@ -570,9 +570,9 @@ def main():
             selected_Q = []
             labels = []
             for i in range(1, 9):
-                if checkbox_values[i - 1]:
-                    selected_Q.append(Q[i - 1])
-                    labels.append(f"Q{i}")
+                if checkbox_values[i]:
+                    selected_Q.append(Q[i])
+                    labels.append(f"Q{i-1}")
 
             freq = np.linspace(0, round(fs/2), len(Q[0])) 
             df = pd.DataFrame(np.array(selected_Q).T, columns=labels)
