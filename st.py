@@ -5,7 +5,6 @@ import pandas as pd
 import csv
 import altair as alt
 import ipywidgets as widgets
-import plotly.graph_objs as go
 from IPython.display import display
 
 
