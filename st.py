@@ -5,6 +5,7 @@ import pandas as pd
 import csv
 import altair as alt
 import ipywidgets as widgets
+import plotly.graph_objs as go
 from IPython.display import display
 
 
@@ -55,6 +56,7 @@ def read_data(filepath, type="ecg"):
     except Exception as e:
         st.error(f"Error membaca file: {e}")
     return np.array(data)
+
 
 def hg_list():
     h, g, n_list = [], [], []
@@ -371,28 +373,50 @@ def filbank_ecg(ecg, qj_dict, delays):
     
     return w2fb
 
-def plot_grid(data1, title=None, data2=None, data3=None, data4=None, label1="Signal", label2="Thresholded", label3="Absolute", label4="MAV", jenis="ecg", kolom="2", timev=None):
-    # Lakukan pemeriksaan jika data2, data3, atau data4 ada
-    min_len = len(data1)
-    yser = list(data1)
-    
-    for data, label in zip([data2, data3, data4], [label2, label3, label4]):
-        if data is not None and len(data) > 0:
-            min_len = min(min_len, len(data))
-            yser.extend(data[:min_len])
-    
-    signal_types = [label1] * len(data1) + \
-                   [label for data, label in zip([data2, data3, data4], [label2, label3, label4]) if data is not None and len(data) > 0 for _ in range(min_len)]
+def plot_grid(data1, title=None, data2=None, data3=None, data4=None,
+              label1="Signal", label2="Thresholded", label3="Absolute", label4="MAV",
+              jenis="ecg", kolom="2", timev=None, fs=250,
+              start_time=None, end_time=None):
 
+    # Kumpulkan semua data yang tidak None
+    data_list = [data for data in [data1, data2, data3, data4] if data is not None]
+    min_len = min(len(data) for data in data_list)
+
+    # Potong semua data ke panjang minimum
+    data1 = np.array(data1[:min_len])
+    data2 = np.array(data2[:min_len]) if data2 is not None else None
+    data3 = np.array(data3[:min_len]) if data3 is not None else None
+    data4 = np.array(data4[:min_len]) if data4 is not None else None
+
+    # Buat vektor waktu
     time = np.arange(min_len) / fs
-    freq = np.linspace(0, fs/2, min_len)
-    if jenis == "ecg"or jenis=="ecg2":
-        height = 200 if jenis=="ecg" else 300
-        width = 1000 if jenis=="ecg" else 450
-    
+
+    # Filter berdasarkan start_time dan end_time
+    if start_time is not None and end_time is not None:
+        mask = (time >= start_time) & (time <= end_time)
+        time = time[mask]
+        data1 = data1[mask]
+        if data2 is not None: data2 = data2[mask]
+        if data3 is not None: data3 = data3[mask]
+        if data4 is not None: data4 = data4[mask]
+        min_len = len(time)
+
+    # Gabungkan data untuk plotting (jenis = ecg)
+    yser = list(data1)
+    signal_types = [label1] * len(data1)
+
+    for data, label in zip([data2, data3, data4], [label2, label3, label4]):
+        if data is not None:
+            yser.extend(list(data))
+            signal_types.extend([label] * len(data))
+
+    # Plot ECG atau waktu
+    if jenis == "ecg" or jenis == "ecg2":
+        height = 200 if jenis == "ecg" else 300
+        width = 1000 if jenis == "ecg" else 450
         df = pd.DataFrame({
             "Time (s)": np.tile(time, len(yser) // min_len),
-            "Amplitude": yser, #np.concatenate([data1, data2]) if data2 is not None else data1,
+            "Amplitude": yser,
             "Signal Type": signal_types
         })
         chart = (
@@ -400,12 +424,16 @@ def plot_grid(data1, title=None, data2=None, data3=None, data4=None, label1="Sig
             .mark_line()
             .encode(
                 x=alt.X("Time (s)", title="Time (s)", axis=alt.Axis(grid=True)),
-                y=alt.Y("Amplitude", title="Amplitude", axis=alt.Axis(grid=True), scale=alt.Scale(domain=[min(yser), max(yser)])),
+                y=alt.Y("Amplitude", title="Amplitude", axis=alt.Axis(grid=True),
+                        scale=alt.Scale(domain=[min(yser), max(yser)])),
                 color="Signal Type:N"
             )
-            .properties(width=width, height = height)
+            .properties(width=width, height=height)
         )
+
+    # Plot Frekuensi
     elif jenis == "freq":
+        freq = np.linspace(0, fs/2, min_len)
         df = pd.DataFrame({
             "Freq (Hz)": np.tile(freq, len(yser) // min_len),
             "Magnitude": yser
@@ -415,13 +443,14 @@ def plot_grid(data1, title=None, data2=None, data3=None, data4=None, label1="Sig
             .mark_line()
             .encode(
                 x=alt.X("Freq (Hz)", title="Freq (Hz)", axis=alt.Axis(grid=True)),
-                y=alt.Y("Magnitude", title="Magnitude", axis=alt.Axis(grid=True), scale=alt.Scale(domain=[min(yser), max(yser)]))
+                y=alt.Y("Magnitude", title="Magnitude", axis=alt.Axis(grid=True),
+                        scale=alt.Scale(domain=[min(yser), max(yser)]))
             )
-            .properties(width=1000, height = 500)
+            .properties(width=1000, height=500)
         )
-    
+
+    # Plot HRV
     elif jenis == "hrv":
-        
         df = pd.DataFrame({
             "Sequence (s)": timev,
             "HR (bpm)": data1,
@@ -431,21 +460,21 @@ def plot_grid(data1, title=None, data2=None, data3=None, data4=None, label1="Sig
             .mark_line()
             .encode(
                 x=alt.X("Sequence (s)", title="Sequence (s)", axis=alt.Axis(grid=True)),
-                y=alt.Y("HR (bpm)", title="HR (bpm)", axis=alt.Axis(grid=True,tickMinStep=0.01), scale=alt.Scale(domain=[min(data1)/2, 1.5*max(data1)]))
+                y=alt.Y("HR (bpm)", title="HR (bpm)", axis=alt.Axis(grid=True, tickMinStep=0.01),
+                        scale=alt.Scale(domain=[min(data1)/2, 1.5*max(data1)]))
             )
-            .properties(width=1000, height = 300)
+            .properties(width=1000, height=300)
         )
-    
+
+    # Tampilkan chart di kolom sesuai
     if kolom == "1":    
         st.altair_chart(chart, use_container_width=True)
-
     elif kolom == "2":
         col1, col2 = st.columns([1, 8])
         with col1:
             st.markdown(f"### {title}")
         with col2:
-            st.altair_chart(chart, use_container_width=True) 
-
+            st.altair_chart(chart, use_container_width=True)
 
 def plot_bar_chart(df, title, x_label, y_label, width=500):
     chart = (
@@ -464,7 +493,7 @@ def thres(dat, threshold, delay):
     absdat = abs(dat)
     dat = MAV(5,absdat)
     for n in range(len(dat)):
-        for j in range(1, 9):
+        for j in range(1, 4):
             if dat[n] > threshold:
                 Out[n] = 1.5  # T3-T1
             else:
@@ -498,9 +527,9 @@ def compute_hr(RR_intervals):
 def main():
     st.sidebar.title("FP ASN Kelompok 2")
     st.sidebar.title("Non Stationary Signal 📚")
-    selected_option = st.sidebar.selectbox("Choose an option", ["Mallat Algorithm Theory", "Filter Bank Theory", "HRV dan Resp Signal"])
-    ecg = read_data('samples.txt')
-    resp = read_data('samples.txt', type="resp")
+    selected_option = st.sidebar.selectbox("Choose an option", ["HRV dan Resp Signal", "Mallat Algorithm Theory", "Filter Bank Theory"])
+    ecg = read_data('samples8min.txt')
+    resp = read_data('samples8min.txt', type="resp") 
 
     if selected_option == "Mallat Algorithm Theory":
         st.title("Mallat Algorithm")
@@ -531,10 +560,17 @@ def main():
         #Contoh penerapan di ECG
         st.title("Mallat Algorithm with ECG Data")
         st.subheader("Raw ECG Signal")
-        plot_grid(ecg, "Raw ECG", kolom="1", label1="Raw ECG")
+        # plot_grid(ecg, "Raw ECG", kolom="1", label1="Raw ECG")
+        max_time = len(ecg) / fs
+        start_time = st.number_input("Waktu mulai (s)", min_value=0.0, max_value=max_time, value=0.0, step=0.1)
+        end_time = st.number_input("Waktu akhir (s)", min_value=0.0, max_value=max_time, value=max_time, step=0.1)
 
+        plot_grid(ecg, "Raw ECG", kolom="1", label1="Raw ECG", fs=fs, start_time=start_time, end_time=end_time)
+        start_index = int(start_time * fs)
+        end_index = int(end_time * fs)
+        ecg_segment = ecg[start_index:end_index]
         #penerapan mallat
-        w2fm, s2fm = mallat(ecg, h, g)
+        w2fm, s2fm = mallat(ecg_segment, h, g)
 
         # Plot hasil Mallat 
         st.subheader("Mallat Transform")
@@ -544,12 +580,12 @@ def main():
             
             with col3:
                 st.subheader(f"w2f{i+1}")
-                plot_grid(w2fm[i, :1250], "", jenis="ecg2", kolom="1", label1=f"w2f{i+1}")
+                plot_grid(w2fm[i, :37500], "", jenis="ecg2", kolom="1", label1=f"w2f{i+1}")
                 # st.line_chart(w2fm[i, :1250])  # Menampilkan w2f
 
             with col4:
                 st.subheader(f"s2f{i+1}")
-                plot_grid(s2fm[i, :1250], "", jenis="ecg2", kolom="1", label1=f"s2f{i+1}")
+                plot_grid(s2fm[i, :37500], "", jenis="ecg2", kolom="1", label1=f"s2f{i+1}")
                 # st.line_chart(s2fm[i, :1250])  # Menampilkan s2f
 
 
@@ -612,13 +648,21 @@ def main():
         st.write(f"T1 = {T1}, T2 = {T2}, T3 = {T3}, T4 = {T4}, T5 = {T5}, T6 = {T6}, T7 = {T7}, T8 = {T8}")
         
         st.title("Filter Bank with ECG Data")
-        plot_grid(ecg, "ECG Raw", label1="ECG Raw")
-        w2fb = filbank_ecg(ecg, qj, delays)
+        # plot_grid(ecg, "ECG Raw", label1="ECG Raw")
+        max_time = len(ecg) / fs
+        start_time = st.number_input("Waktu mulai (s)", min_value=0.0, max_value=max_time, value=0.0, step=0.1)
+        end_time = st.number_input("Waktu akhir (s)", min_value=0.0, max_value=max_time, value=max_time, step=0.1)
 
+        plot_grid(ecg, "Raw ECG", kolom="1", label1="Raw ECG", fs=fs, start_time=start_time, end_time=end_time)
+        start_index = int(start_time * fs)
+        end_index = int(end_time * fs)
+        ecg_segment = ecg[start_index:end_index]
+        w2fb = filbank_ecg(ecg_segment, qj, delays)
+                                                                     
         # Plot the processed signals
         st.subheader("Filtered ECG Signal")
         for i in range(1, 9):
-            plot_grid(w2fb[i][:1250], f"Scale {i}", label1=f"Scale {i}")
+            plot_grid(w2fb[i][:37500], f"Scale {i}", label1=f"Scale {i}")
             
     
     elif selected_option == "HRV dan Resp Signal": 
@@ -653,7 +697,7 @@ def main():
         st.title("Filter Bank for ECG")
         plot_grid(ecg2, "Raw ECG", label1="Raw ECG")
         w2fb = filbank_ecg(ecg, qj, delays)
-        for i in range(1, 9):
+        for i in range(1, 4):
             plot_grid(w2fb[i], f"Scale {i}", label1= f"DWT Scale {i}")
         
         st.subheader("Threshold")
@@ -664,7 +708,7 @@ def main():
         checkbox_data2 = st.checkbox("Show Threshold", value=True)
         checkbox_data3 = st.checkbox("Show Absolute", value=True)
         checkbox_data4 = st.checkbox("Show MAV", value=True)
-        for i in range(1, 9):
+        for i in range(1, 4):
             # Tentukan threshold berdasarkan paper
             if i == 1:  # Skala 2^1 - 2^3
                 th = 0.18
@@ -738,7 +782,7 @@ def main():
         st.subheader("Respiratory Signal Using DWT Scale 8")
         respi = np.zeros(len(ecg))
         respi2 = np.zeros(len(ecg))
-        for i in range (T8,128*10):
+        for i in range (T8,125*300):
             respi[i-T8]=w2fb[8][i]
             respi2[i-T8]= respi[i-T8]*20
 
