@@ -1,10 +1,12 @@
 import numpy as np
-import math
 import streamlit as st
+import math
 import pandas as pd
 import csv
 import altair as alt
-import ipywidgets as widgets
+import pyhrv.nonlinear
+import matplotlib.pyplot as plt
+# import ipywidgets as widgets
 from IPython.display import display
 
 
@@ -464,6 +466,36 @@ def plot_grid(data1, title=None, data2=None, data3=None, data4=None,
             )
             .properties(width=1000, height=300)
         )
+    elif jenis == "rr":
+        df = pd.DataFrame({
+            "Sequence (s)": timev,
+            "RR (s)": data1,
+        })
+        chart = (
+            alt.Chart(df)
+            .mark_line()
+            .encode(
+                x=alt.X("Sequence (s)", title="Sequence (s)", axis=alt.Axis(grid=True)),
+                y=alt.Y("RR (s)", title="RR (s)", axis=alt.Axis(grid=True, tickMinStep=0.01),
+                        scale=alt.Scale(domain=[min(data1)/2, 1.5*max(data1)]))
+            )
+            .properties(width=1000, height=300)
+        )
+    elif jenis == "pp":
+        df = pd.DataFrame({
+            "Sequence (s)": timev,
+            "Resp Peak to Peak (s)": data1,
+        })
+        chart = (
+            alt.Chart(df)
+            .mark_line()
+            .encode(
+                x=alt.X("Sequence (s)", title="Sequence (s)", axis=alt.Axis(grid=True)),
+                y=alt.Y("Resp Peak to Peak (s)", title="Resp Peak to Peak (s)", axis=alt.Axis(grid=True, tickMinStep=0.01),
+                        scale=alt.Scale(domain=[min(data1)/2, 1.5*max(data1)]))
+            )
+            .properties(width=1000, height=300)
+        )
 
     # Tampilkan chart di kolom sesuai
     if kolom == "1":    
@@ -527,8 +559,8 @@ def main():
     st.sidebar.title("FP ASN Kelompok 2")
     st.sidebar.title("Non Stationary Signal 📚")
     selected_option = st.sidebar.selectbox("Choose an option", ["HRV dan Resp Signal", "Mallat Algorithm Theory", "Filter Bank Theory"])
-    ecg = read_data('samples8min.txt')
-    resp = read_data('samples8min.txt', type="resp") 
+    ecg = read_data('D:\Coolyeah\Sem6\ASN\FP2\samples8min.txt')
+    resp = read_data('D:\Coolyeah\Sem6\ASN\FP2\samples8min.txt', type="resp") 
 
     if selected_option == "Mallat Algorithm Theory":
         st.title("Mallat Algorithm")
@@ -559,17 +591,13 @@ def main():
         #Contoh penerapan di ECG
         st.title("Mallat Algorithm with ECG Data")
         st.subheader("Raw ECG Signal")
-        # plot_grid(ecg, "Raw ECG", kolom="1", label1="Raw ECG")
         max_time = len(ecg) / fs
         start_time = st.number_input("Waktu mulai (s)", min_value=0.0, max_value=max_time, value=0.0, step=0.1)
         end_time = st.number_input("Waktu akhir (s)", min_value=0.0, max_value=max_time, value=max_time, step=0.1)
 
         plot_grid(ecg, "Raw ECG", kolom="1", label1="Raw ECG", fs=fs, start_time=start_time, end_time=end_time)
-        start_index = int(start_time * fs)
-        end_index = int(end_time * fs)
-        ecg_segment = ecg[start_index:end_index]
         #penerapan mallat
-        w2fm, s2fm = mallat(ecg_segment, h, g)
+        w2fm, s2fm = mallat(ecg, h, g)
 
         # Plot hasil Mallat 
         st.subheader("Mallat Transform")
@@ -579,12 +607,12 @@ def main():
             
             with col3:
                 st.subheader(f"w2f{i+1}")
-                plot_grid(w2fm[i, :37500], "", jenis="ecg2", kolom="1", label1=f"w2f{i+1}")
+                plot_grid(w2fm[i, :37500], "", jenis="ecg2", kolom="1", label1=f"w2f{i+1}", fs=fs, start_time=start_time, end_time=end_time)
                 # st.line_chart(w2fm[i, :1250])  # Menampilkan w2f
 
             with col4:
                 st.subheader(f"s2f{i+1}")
-                plot_grid(s2fm[i, :37500], "", jenis="ecg2", kolom="1", label1=f"s2f{i+1}")
+                plot_grid(s2fm[i, :37500], "", jenis="ecg2", kolom="1", label1=f"s2f{i+1}", fs=fs, start_time=start_time, end_time=end_time)
                 # st.line_chart(s2fm[i, :1250])  # Menampilkan s2f
 
 
@@ -653,24 +681,18 @@ def main():
         end_time = st.number_input("Waktu akhir (s)", min_value=0.0, max_value=max_time, value=max_time, step=0.1)
 
         plot_grid(ecg, "Raw ECG", kolom="1", label1="Raw ECG", fs=fs, start_time=start_time, end_time=end_time)
-        start_index = int(start_time * fs)
-        end_index = int(end_time * fs)
-        ecg_segment = ecg[start_index:end_index]
-        w2fb = filbank_ecg(ecg_segment, qj, delays)
+
+        w2fb = filbank_ecg(ecg, qj, delays)
                                                                      
         # Plot the processed signals
         st.subheader("Filtered ECG Signal")
         for i in range(1, 9):
-            plot_grid(w2fb[i][:37500], f"Scale {i}", label1=f"Scale {i}")
+            plot_grid(w2fb[i][:37500], f"Scale {i}", label1=f"Scale {i}", fs=fs, start_time=start_time, end_time=end_time)
             
     
     elif selected_option == "HRV dan Resp Signal": 
         st.title("Wavelet Plot HRV dan Respiratory Signal")
-        # st.subheader("Uploaded .txt File")
-        # uploaded_file = st.file_uploader("Upload .txt File", type=["txt"])
-        # if uploaded_file is not None:
-        #     ecg2 = read_ecg(uploaded_file)
-        #     st.write(f"ECG data successfully loaded with {len(ecg2)} data points.")
+
         
         ecg2 = list(ecg-0.4)  # Konversi numpy array ke list
         for _ in range(2 * fs): #padding
@@ -693,17 +715,110 @@ def main():
         T7 = delays[7]
         T8 = delays[8]
 
-        st.title("Filter Bank for ECG")
-        plot_grid(ecg2, "Raw ECG", label1="Raw ECG")
-        w2fb = filbank_ecg(ecg, qj, delays)
-        for i in range(1, 4):
-            plot_grid(w2fb[i], f"Scale {i}", label1= f"DWT Scale {i}")
         
-        st.subheader("Threshold")
+        st.title("Filter Bank for ECG")
+
+        max_time = len(ecg) / fs
+        start_time = st.number_input("Waktu mulai (s)", min_value=0.0, max_value=max_time, value=0.0, step=0.1)
+        end_time = st.number_input("Waktu akhir (s)", min_value=0.0, max_value=max_time, value=max_time, step=0.1)
+
+        plot_grid(ecg2, "Raw ECG", kolom="1", label1="Raw ECG", fs=fs, start_time=start_time, end_time=end_time)
+        
+        w2fb = filbank_ecg(ecg, qj, delays)
+
+        for i in range(1, 4):
+            plot_grid(w2fb[i], f"Scale {i}", label1= f"DWT Scale {i}", fs=fs, start_time=start_time, end_time=end_time)
+        
+        st.header("Respiratory Signal Using DWT Scale 8")
+        respi = np.zeros(len(ecg))
+        respi2 = np.zeros(len(ecg))
+        max_len = min(len(w2fb[8]), len(ecg) + T8)
+        for i in range(T8, max_len):
+            respi[i-T8] = w2fb[8][i]
+            respi2[i-T8]= respi[i-T8]*20
+
+        # plot_grid(w2fb[8], "Orde 8", data2=resp)
+        plot_grid(respi, "ECG-Derived Respiratory (Scale 8)", label1="DWT Scale 8", fs=fs, start_time=start_time, end_time=end_time)
+        plot_grid(resp, "Respiratory Signal", label1="Resp Signal", fs=fs, start_time=start_time, end_time=end_time)
+        st.subheader("Comparing Signal")
+        st.write("Note: The amplitude of DWT scale 8 is magnified 20 times.")
+        plot_grid(resp, label1="Resp Signal", data2=respi2, label2="DWT Scale 8", kolom="1", fs=fs, start_time=start_time, end_time=end_time)
+
+        st.header("Threshold for Resp Rate")
+        def thresres(dat, threshold):
+            Out = np.zeros(len(dat))  # Buat array kosong (1D)
+            for n in range(len(dat)):
+                if dat[n] > threshold:
+                    Out[n] = 1  
+                else:
+                    Out[n] = 0
+            return Out  
+        
+        st.subheader("Respiratory Signal Using DWT Scale 8")
+        thresoutt = {}
+        th=0.01
+        thresoutt = thresres(respi, th)
+        plot_grid(
+                respi,  # Data pertama
+                f"Resp DWT",  # Judul plot
+                data2=thresoutt,  
+                label1=f"Resp DWT Scale 8",  # Label pertama
+                label2="Threshold",  # Label kedua
+                fs=fs, start_time=start_time, end_time=end_time
+            )
+        PPresp = detect_rpeak(thresoutt)
+        PP_intervals = compute_rr_intervals(PPresp)  
+        PP_bpm = compute_hr(PP_intervals)  
+        meanPP = sum(PP_intervals)/len(PP_intervals)
+        meanbpm = sum(PP_bpm)/len(PP_bpm)
+        fs_PP = 1 / meanPP if PP_intervals else 1  
+        seq_time = np.arange(len(PP_bpm)) / fs_PP
+        st.write("**Peak to Peak (s):**", PPresp)
+        st.write("**PP Intervals (s):**", PP_intervals)
+        st.write("**Mean PP Intervals (s):**", meanPP)
+        st.write("**Resp Rate (Bpm):**", PP_bpm)
+        st.write("**Mean Resp Rate (bpm):**", meanbpm)
+        st.write("**fs Resp Rate:**", fs_PP)
+        st.write("**Sequence(s):**", seq_time)
+        st.subheader("Respiratory Rate Plot")
+        plot_grid(PP_bpm, "Resp Rate Plot", jenis="pp", timev=seq_time)
+
+        st.subheader("Respiratory Signal from Sensor")
+        thresouts = {}
+        th=0.6
+        thresouts = thresres(resp, th)
+        plot_grid(
+                resp,  # Data pertama
+                f"Threshold Resp Sensor",  # Judul plot
+                data2=thresouts,  
+                label1=f"Resp Sensor",  # Label pertama
+                label2="Threshold",  # Label kedua
+                fs=fs, start_time=start_time, end_time=end_time
+            )
+        PPresp = detect_rpeak(thresouts)
+        PP_intervals = compute_rr_intervals(PPresp)  
+        PP_bpm = compute_hr(PP_intervals)  
+        meanPP = sum(PP_intervals)/len(PP_intervals)
+        meanbpm = sum(PP_bpm)/len(PP_bpm)
+        fs_PP = 1 / meanPP if PP_intervals else 1  
+        seq_time = np.arange(len(PP_bpm)) / fs_PP
+        st.write("**Peak to Peak (s):**", PPresp)
+        st.write("**PP Intervals (s):**", PP_intervals)
+        st.write("**Mean PP Intervals (s):**", meanPP)
+        st.write("**Resp Rate (Bpm):**", PP_bpm)
+        st.write("**Mean Resp Rate (bpm):**", meanbpm)
+        st.write("**fs Resp Rate:**", fs_PP)
+        st.write("**Sequence(s):**", seq_time)
+        st.subheader("Respiratory Rate Plot")
+        plot_grid(PP_bpm, "Resp Rate Plot", jenis="pp", timev=seq_time)
+
+
+        st.header("Threshold for HRV")
         absdat = {}
         mav = {}
         thresout = {}
-        plot_grid(ecg2, "Raw ECG")
+
+        plot_grid(ecg2, "Raw ECG", fs=fs, start_time=start_time, end_time=end_time)
         checkbox_data2 = st.checkbox("Show Threshold", value=True)
         checkbox_data3 = st.checkbox("Show Absolute", value=True)
         checkbox_data4 = st.checkbox("Show MAV", value=True)
@@ -712,9 +827,9 @@ def main():
             if i == 1:  # Skala 2^1 - 2^3
                 th = 0.18
             elif i == 2:
-                th = 0.13
+                th = 0.25
             elif i == 3:
-                th = 0.09
+                th = 0.7
             elif i == 4:
                 th = 0.3
             elif i == 5:
@@ -743,6 +858,7 @@ def main():
                 label2="Threshold",  # Label kedua
                 label3="Absolute",  # Label ketiga
                 label4="MAV",  # Label keempat
+                fs=fs, start_time=start_time, end_time=end_time
             )
         
         st.subheader("R peak")
@@ -752,8 +868,8 @@ def main():
         # Loop setiap titik data
         for n in range(len(rpeak)):  
             if (thresout[1][n] == 1.5 and 
-                thresout[2][n] == 1.5 and 
-                thresout[3][n] == 1.5):
+                thresout[2][n+1] == 1.5 and 
+                thresout[3][n+3] == 1.5):
                 # thresout[4][n] == 1.5 and 
                 # thresout[5][n] == 1.5):
                 rpeak[n-3] = 1 #T3-T1
@@ -761,37 +877,207 @@ def main():
                 rpeak[n-3] = 0
 
         # Plot hasilnya
-        plot_grid(ecg2, "R-Peak Detection", data2=rpeak, label1="Raw ECG", label2="R-Peak")
+        plot_grid(ecg2, "R-Peak Detection", data2=rpeak, label1="Raw ECG", label2="R-Peak", fs=fs, start_time=start_time, end_time=end_time)
 
         RR = detect_rpeak(rpeak)  # Ambil waktu deteksi R-peak
         RR_intervals = compute_rr_intervals(RR)  # Hitung RR Interval
         HR = compute_hr(RR_intervals)  # Hitung HR dalam bpm
         meanRR = sum(RR_intervals)/len(RR_intervals)
+        meanbpm = sum(HR)/len(HR)
         fs_HRV = 1 / meanRR if RR_intervals else 1  # Sampling rate HRV
         sequence_time = np.arange(len(HR)) / fs_HRV  # Waktu sequence (detik)
         st.write("**RR (s):**", RR)
         st.write("**RR Intervals (s):**", RR_intervals)
-        st.write("**HR (Bpm):**", HR)
         st.write("**Mean RR Intervals (s):**", meanRR)
+        st.write("**HR (Bpm):**", HR)
+        st.write("**Mean HR (bpm):**", meanbpm)
         st.write("**fs HRV:**", fs_HRV)
         st.write("**Sequence(s):**", sequence_time)
         st.subheader("Heart Rate Variability (HRV)")
         plot_grid(HR, "HRV Plot", jenis="hrv", kolom="1", timev=sequence_time)
+        plot_grid(RR_intervals, "RR Plot", jenis="rr", kolom="1", timev=sequence_time)
 
-        st.subheader("Respiratory Signal Using DWT Scale 8")
-        respi = np.zeros(len(ecg))
-        respi2 = np.zeros(len(ecg))
-        for i in range (T8,125*300):
-            respi[i-T8]=w2fb[8][i]
-            respi2[i-T8]= respi[i-T8]*20
+        st.header("Analisis Time Domain")
 
-        # plot_grid(w2fb[8], "Orde 8", data2=resp)
-        plot_grid(respi, "ECG-Derived Respiratory (Scale 8)", label1="DWT Scale 8")
-        plot_grid(resp, "Respiratory Signal", label1="Resp Signal")
-        st.subheader("Comparing Signal")
-        st.write("Note: The amplitude of DWT scale 8 is magnified 20 times.")
-        plot_grid(resp, label1="Resp Signal", data2=respi2, label2="DWT Scale 8", kolom="1")
-        
+        # Pastikan RR_intervals adalah list biasa
+        RR_intervals = np.array(RR_intervals)
+
+        # Ubah ke milidetik
+        rr_ms = RR_intervals*1000 #[x * 1000 for x in RR_intervals]
+
+        # SDNN: Standar deviasi dari RR
+        mean_rr = sum(rr_ms) / len(rr_ms)
+        sdnn = np.sqrt(sum((x - mean_rr) ** 2 for x in rr_ms) / (len(rr_ms) - 1))
+
+        # RMSSD: Akar rata-rata kuadrat dari selisih berturut-turut
+        diff_rr = [rr_ms[i+1] - rr_ms[i] for i in range(len(rr_ms) - 1)]
+        rmssd = np.sqrt(sum(x ** 2 for x in diff_rr) / len(diff_rr))
+
+        # SDSD: Standar deviasi dari selisih berturut-turut
+        mean_diff = sum(diff_rr) / len(diff_rr)
+        sdsd = np.sqrt(sum((x - mean_diff) ** 2 for x in diff_rr) / (len(diff_rr) - 1))
+
+        # PNN50: Persentase selisih RR > 50ms
+        nn50 = sum(1 for x in diff_rr if abs(x) > 50)
+        pnn50 = (nn50 / len(diff_rr)) * 100
+
+
+        # Tampilkan hasil di Streamlit
+        st.write(f"**SDNN (ms):** {sdnn:.2f}")
+        st.write(f"**RMSSD (ms):** {rmssd:.2f}")
+        st.write(f"**PNN50 (%):** {pnn50:.2f}")
+        st.write(f"**SDSD (ms):** {sdsd:.2f}")
+        st.write(f"**n sampel:** {len(rr_ms)}")
+
+        # Buat histogram manual
+        bin_width = 10  # dalam milidetik
+        min_bin = int(np.floor(rr_ms.min() / bin_width) * bin_width)
+        max_bin = int(np.ceil(rr_ms.max() / bin_width) * bin_width + bin_width)
+        bins = np.arange(min_bin, max_bin, bin_width)
+
+        fig, ax = plt.subplots()
+        ax.hist(rr_ms, bins=bins, edgecolor='black')
+        ax.set_xlabel("RR Interval (ms)")
+        ax.set_ylabel("Jumlah")
+        ax.set_title("Histogram RR Intervals (Bar Plot)")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.pyplot(fig)
+
+        st.header("Analisis Frekuensi Domain")
+
+        # --- Interpolasi ke 4 Hz (sampling uniform) ---
+        def interpolate(rr_intervals, fs_interp=4):
+            duration = np.cumsum(rr_intervals)
+            t_uniform = np.arange(0, duration[-1], 1 / fs_interp)
+            rr_interp = np.interp(t_uniform, duration, rr_intervals)
+            return rr_interp, t_uniform
+
+        # --- Fungsi Hamming Window Manual ---
+        def hamming(N):
+            return [0.54 - 0.46 * math.cos(2 * math.pi * n / (N - 1)) for n in range(N)]
+
+        # --- DFT Manual (bukan FFT) ---
+        def dft(signal, fs):
+            N = len(signal)
+            psd = []
+            freqs = []
+            for k in range(N // 2 + 1):
+                real = sum(signal[n] * math.cos(2 * np.pi * k * n / N) for n in range(N))
+                imag = sum(-signal[n] * math.sin(2 * np.pi * k * n / N) for n in range(N))
+                power = (real**2 + imag**2) / N
+                psd.append(power)
+                freqs.append(k * fs / N)
+            return np.array(freqs), np.array(psd)
+
+        # --- Proses Welch (Sum of PSD Segmen) ---
+        def calculate_psd(rr_intervals, fs_interp=4, window_size=240, overlap=120, pad_to=512):
+            rr_interp, t_uniform = interpolate(rr_intervals, fs_interp)
+            
+            step = window_size - overlap
+            segments = []
+            
+            # Proses tiap segmen
+            for start in range(0, len(rr_interp) - window_size + 1, step):
+                segment = rr_interp[start:start + window_size]
+                segment = segment - np.mean(segment)  # detrend
+                window = hamming(window_size)
+                windowed = [s * w for s, w in zip(segment, window)]
+                padded = windowed + [0.0] * (pad_to - window_size)
+                freqs, psd = dft(padded, fs_interp)
+                segments.append(psd)
+            
+            # Jumlahkan PSD dari semua segmen
+            psd_sum = np.sum(segments, axis=0)
+            return freqs, psd_sum
+
+        # --- Hitung Band Power ---
+        def band_power(freqs, psd, f_low, f_high):
+            return np.sum(psd[(freqs >= f_low) & (freqs < f_high)])
+
+        # Streamlit Interface
+        st.title("Welch Power Spectral Density (PSD) Calculation")
+
+        # Hitung PSD menggunakan Welch manual
+        freqs, psd_sum = calculate_psd(RR_intervals)
+
+        # Menampilkan grafik PSD
+        st.subheader("Power Spectral Density (PSD) - Welch Method")
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.fill_between(freqs, psd_sum * 1000, where=[f < 0.4 for f in freqs], alpha=0.8)
+
+        # Menambahkan garis vertikal di batas frekuensi
+        ax.axvline(x=0.04, color="#E8DFF5", linestyle="--")
+        ax.axvline(x=0.15, color="#FCE1E4", linestyle="--")
+        ax.axvline(x=0.4, color="#FCF4DD", linestyle="--")
+
+        # Pengaturan judul, label sumbu, dan legenda
+        ax.set_title("Power Spectral Density (PSD) - Welch Method")
+        ax.set_xlabel("Frequency (Hz)")
+        ax.set_ylabel("Power (×10⁻³ s²/Hz)")
+        ax.legend(["PSD"])
+
+        # Menampilkan grafik di Streamlit
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.pyplot(fig)
+
+        # Menghitung Band Power
+        vlf_power = band_power(freqs, psd_sum, 0.003, 0.04)
+        lf_power  = band_power(freqs, psd_sum, 0.04, 0.15)
+        hf_power  = band_power(freqs, psd_sum, 0.15, 0.4)
+        total_power = vlf_power + lf_power + hf_power
+
+        # Hitung Persentase (dalam unit normal)
+        lf_nu = lf_power / (total_power - vlf_power) if (total_power - vlf_power) > 0 else 0
+        hf_nu = hf_power / (total_power - vlf_power) if (total_power - vlf_power) > 0 else 0
+
+        # Menampilkan Power di console
+        st.write(f"Powers:")
+        st.write(f"VLF: {vlf_power*1000:.2f} ms²")
+        st.write(f"LF:  {lf_power*1000:.2f} ms²")
+        st.write(f"HF:  {hf_power*1000:.2f} ms²")
+        st.write(f"Total: {total_power*1000:.2f} ms²")
+        st.write(f"LF/HF ratio:  {lf_power/hf_power:.2f}")
+
+        labels = ['LF', 'HF']
+        powers = [lf_nu, hf_nu]
+
+        # Plot
+        plt.figure(figsize=(5, 4))
+        plt.bar(labels, powers, color=['green', 'blue'])
+        plt.ylabel('Power (ms²)')
+        plt.title('LF and HF Power')
+        plt.ylim(0, max(powers) * 1.2)  # Biar ada ruang di atas
+        plt.grid(axis='y', linestyle='--', alpha=0.5)
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.pyplot(plt)
+
+        # Diagram Keseimbangan Otonom
+        fig, ax = plt.subplots()
+        ax.axhline(y=33.3, color='r', linestyle='-')
+        ax.axhline(y=66.6, color='r', linestyle='-')
+        ax.axvline(x=33.3, color='r', linestyle='-')
+        ax.axvline(x=66.6, color='r', linestyle='-')
+        ax.scatter(lf_nu * 100, hf_nu * 100)
+        ax.set_xlim(0, 100)  
+        ax.set_ylim(0, 100) 
+        ax.set_title("Autonomic Balance Diagram")
+        ax.set_xlabel("Sympathetic NS - LF")
+        ax.set_ylabel("Parasympathetic NS - HF")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.pyplot(fig)
+
+
+        st.header("Analisis Non Linear")
+        results = pyhrv.nonlinear.poincare(nni=RR_intervals, show=False)
+        fig = plt.gcf()
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.pyplot(fig)
 
 
 
