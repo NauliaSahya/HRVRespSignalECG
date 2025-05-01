@@ -559,8 +559,8 @@ def main():
     st.sidebar.title("FP ASN Kelompok 2")
     st.sidebar.title("Non Stationary Signal 📚")
     selected_option = st.sidebar.selectbox("Choose an option", ["HRV dan Resp Signal", "Mallat Algorithm Theory", "Filter Bank Theory"])
-    ecg = read_data('D:\Coolyeah\Sem6\ASN\FP2\samples8min.txt')
-    resp = read_data('D:\Coolyeah\Sem6\ASN\FP2\samples8min.txt', type="resp") 
+    ecg = read_data('samples8min.txt')
+    resp = read_data('samples8min.txt', type="resp") 
 
     if selected_option == "Mallat Algorithm Theory":
         st.title("Mallat Algorithm")
