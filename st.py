@@ -559,8 +559,8 @@ def main():
     st.sidebar.title("FP ASN Kelompok 2")
     st.sidebar.title("Non Stationary Signal 📚")
     selected_option = st.sidebar.selectbox("Choose an option", ["HRV dan Resp Signal", "Mallat Algorithm Theory", "Filter Bank Theory"])
-    ecg = read_data('samples8min.txt')
-    resp = read_data('samples8min.txt', type="resp") 
+    ecg = read_data('samples5min.txt')
+    resp = read_data('samples5min.txt', type="resp") 
 
     if selected_option == "Mallat Algorithm Theory":
         st.title("Mallat Algorithm")
@@ -591,6 +591,7 @@ def main():
         #Contoh penerapan di ECG
         st.title("Mallat Algorithm with ECG Data")
         st.subheader("Raw ECG Signal")
+        # plot_grid(ecg, "Raw ECG", kolom="1", label1="Raw ECG")
         max_time = len(ecg) / fs
         start_time = st.number_input("Waktu mulai (s)", min_value=0.0, max_value=max_time, value=0.0, step=0.1)
         end_time = st.number_input("Waktu akhir (s)", min_value=0.0, max_value=max_time, value=max_time, step=0.1)
@@ -692,7 +693,11 @@ def main():
     
     elif selected_option == "HRV dan Resp Signal": 
         st.title("Wavelet Plot HRV dan Respiratory Signal")
-
+        # st.subheader("Uploaded .txt File")
+        # uploaded_file = st.file_uploader("Upload .txt File", type=["txt"])
+        # if uploaded_file is not None:
+        #     ecg2 = read_ecg(uploaded_file)
+        #     st.write(f"ECG data successfully loaded with {len(ecg2)} data points.")
         
         ecg2 = list(ecg-0.4)  # Konversi numpy array ke list
         for _ in range(2 * fs): #padding
@@ -717,6 +722,16 @@ def main():
 
         
         st.title("Filter Bank for ECG")
+        # max_time = len(ecg) / fs
+        # start_time = st.number_input("Waktu mulai (s)", min_value=0.0, max_value=max_time, value=0.0, step=0.1)
+        # end_time = st.number_input("Waktu akhir (s)", min_value=0.0, max_value=max_time, value=max_time, step=0.1)
+
+        # plot_grid(ecg, "Raw ECG", kolom="1", label1="Raw ECG", fs=fs, start_time=start_time, end_time=end_time)
+        # start_index = int(start_time * fs)
+        # end_index = int(end_time * fs)
+        # ecg_segment = ecg[start_index:end_index]
+        # # plot_grid(ecg_segment, "Raw ECG", label1="Raw ECG")
+        # w2fb = filbank_ecg(ecg_segment, qj, delays)
 
         max_time = len(ecg) / fs
         start_time = st.number_input("Waktu mulai (s)", min_value=0.0, max_value=max_time, value=0.0, step=0.1)
@@ -729,7 +744,7 @@ def main():
         for i in range(1, 4):
             plot_grid(w2fb[i], f"Scale {i}", label1= f"DWT Scale {i}", fs=fs, start_time=start_time, end_time=end_time)
         
-        st.header("Respiratory Signal Using DWT Scale 8")
+        st.subheader("Respiratory Signal Using DWT Scale 8")
         respi = np.zeros(len(ecg))
         respi2 = np.zeros(len(ecg))
         max_len = min(len(w2fb[8]), len(ecg) + T8)
@@ -744,76 +759,90 @@ def main():
         st.write("Note: The amplitude of DWT scale 8 is magnified 20 times.")
         plot_grid(resp, label1="Resp Signal", data2=respi2, label2="DWT Scale 8", kolom="1", fs=fs, start_time=start_time, end_time=end_time)
 
-        st.header("Threshold for Resp Rate")
-        def thresres(dat, threshold):
-            Out = np.zeros(len(dat))  # Buat array kosong (1D)
-            for n in range(len(dat)):
-                if dat[n] > threshold:
-                    Out[n] = 1  
-                else:
-                    Out[n] = 0
-            return Out  
+        # st.subheader("Threshold for Resp Rate")
+        # def thresres(dat, threshold):
+        #     Out = np.zeros(len(dat))  # Buat array kosong (1D)
+        #     absdat = abs(dat)
+        #     dat = MAV(5,absdat)
+        #     for n in range(len(dat)):
+        #         if dat[n] > threshold:
+        #             Out[n] = 1  
+        #         else:
+        #             Out[n] = 0
+        #     return absdat, dat, Out  
         
-        st.subheader("Respiratory Signal Using DWT Scale 8")
-        thresoutt = {}
-        th=0.01
-        thresoutt = thresres(respi, th)
-        plot_grid(
-                respi,  # Data pertama
-                f"Resp DWT",  # Judul plot
-                data2=thresoutt,  
-                label1=f"Resp DWT Scale 8",  # Label pertama
-                label2="Threshold",  # Label kedua
-                fs=fs, start_time=start_time, end_time=end_time
-            )
-        PPresp = detect_rpeak(thresoutt)
-        PP_intervals = compute_rr_intervals(PPresp)  
-        PP_bpm = compute_hr(PP_intervals)  
-        meanPP = sum(PP_intervals)/len(PP_intervals)
-        meanbpm = sum(PP_bpm)/len(PP_bpm)
-        fs_PP = 1 / meanPP if PP_intervals else 1  
-        seq_time = np.arange(len(PP_bpm)) / fs_PP
-        st.write("**Peak to Peak (s):**", PPresp)
-        st.write("**PP Intervals (s):**", PP_intervals)
-        st.write("**Mean PP Intervals (s):**", meanPP)
-        st.write("**Resp Rate (Bpm):**", PP_bpm)
-        st.write("**Mean Resp Rate (bpm):**", meanbpm)
-        st.write("**fs Resp Rate:**", fs_PP)
-        st.write("**Sequence(s):**", seq_time)
-        st.subheader("Respiratory Rate Plot")
-        plot_grid(PP_bpm, "Resp Rate Plot", jenis="pp", timev=seq_time)
+        # st.subheader("Respiratory Signal Using DWT Scale 8")
+        # absdatt = {}
+        # mavv = {}
+        # thresoutt = {}
+        # th=0.1
+        # absdatt, mavv, thresoutt = thresres(respi, th)
+        # plot_grid(
+        #         respi,  # Data pertama
+        #         f"Threshold Scale {i}",  # Judul plot
+        #         data2=thresoutt,  
+        #         data3=absdatt,  
+        #         data4=mavv,
+        #         label1=f"Resp DWT Scale {i}",  # Label pertama
+        #         label2="Threshold",  # Label kedua
+        #         label3="Absolute",  # Label ketiga
+        #         label4="MAV",  # Label keempat
+        #         fs=fs, start_time=start_time, end_time=end_time
+        #     )
+        # PPresp = detect_rpeak(thresoutt)
+        # PP_intervals = compute_rr_intervals(PPresp)  
+        # PP_bpm = compute_hr(PP_intervals)  
+        # meanPP = sum(PP_intervals)/len(PP_intervals)
+        # meanbpm = sum(PP_bpm)/len(PP_bpm)
+        # fs_PP = 1 / meanPP if PP_intervals else 1  
+        # seq_time = np.arange(len(PP_bpm)) / fs_PP
+        # st.write("**Peak to Peak (s):**", PPresp)
+        # st.write("**PP Intervals (s):**", PP_intervals)
+        # st.write("**Mean PP Intervals (s):**", meanPP)
+        # st.write("**Resp Rate (Bpm):**", PP_bpm)
+        # st.write("**Mean Resp Rate (bpm):**", meanbpm)
+        # st.write("**fs Resp Rate:**", fs_PP)
+        # st.write("**Sequence(s):**", seq_time)
+        # st.subheader("Respiratory Rate Plot")
+        # plot_grid(PP_bpm, "Resp Rate Plot", jenis="pp", kolom="1", timev=sequence_time)
 
-        st.subheader("Respiratory Signal from Sensor")
-        thresouts = {}
-        th=0.6
-        thresouts = thresres(resp, th)
-        plot_grid(
-                resp,  # Data pertama
-                f"Threshold Resp Sensor",  # Judul plot
-                data2=thresouts,  
-                label1=f"Resp Sensor",  # Label pertama
-                label2="Threshold",  # Label kedua
-                fs=fs, start_time=start_time, end_time=end_time
-            )
-        PPresp = detect_rpeak(thresouts)
-        PP_intervals = compute_rr_intervals(PPresp)  
-        PP_bpm = compute_hr(PP_intervals)  
-        meanPP = sum(PP_intervals)/len(PP_intervals)
-        meanbpm = sum(PP_bpm)/len(PP_bpm)
-        fs_PP = 1 / meanPP if PP_intervals else 1  
-        seq_time = np.arange(len(PP_bpm)) / fs_PP
-        st.write("**Peak to Peak (s):**", PPresp)
-        st.write("**PP Intervals (s):**", PP_intervals)
-        st.write("**Mean PP Intervals (s):**", meanPP)
-        st.write("**Resp Rate (Bpm):**", PP_bpm)
-        st.write("**Mean Resp Rate (bpm):**", meanbpm)
-        st.write("**fs Resp Rate:**", fs_PP)
-        st.write("**Sequence(s):**", seq_time)
-        st.subheader("Respiratory Rate Plot")
-        plot_grid(PP_bpm, "Resp Rate Plot", jenis="pp", timev=seq_time)
+        # st.subheader("Respiratory Signal from Sensor")
+        # absdatt = {}
+        # mavv = {}
+        # thresoutt = {}
+        # th=0.5
+        # absdats, mavs, thresouts = thresres(resp, th)
+        # plot_grid(
+        #         resp,  # Data pertama
+        #         f"Threshold Scale {i}",  # Judul plot
+        #         data2=thresouts,  
+        #         data3=absdats,  
+        #         data4=mavs,
+        #         label1=f"Resp DWT Scale {i}",  # Label pertama
+        #         label2="Threshold",  # Label kedua
+        #         label3="Absolute",  # Label ketiga
+        #         label4="MAV",  # Label keempat
+        #         fs=fs, start_time=start_time, end_time=end_time
+        #     )
+        # PPresp = detect_rpeak(thresouts)
+        # PP_intervals = compute_rr_intervals(PPresp)  
+        # PP_bpm = compute_hr(PP_intervals)  
+        # meanPP = sum(PP_intervals)/len(PP_intervals)
+        # meanbpm = sum(PP_bpm)/len(PP_bpm)
+        # fs_PP = 1 / meanPP if PP_intervals else 1  
+        # seq_time = np.arange(len(PP_bpm)) / fs_PP
+        # st.write("**Peak to Peak (s):**", PPresp)
+        # st.write("**PP Intervals (s):**", PP_intervals)
+        # st.write("**Mean PP Intervals (s):**", meanPP)
+        # st.write("**Resp Rate (Bpm):**", PP_bpm)
+        # st.write("**Mean Resp Rate (bpm):**", meanbpm)
+        # st.write("**fs Resp Rate:**", fs_PP)
+        # st.write("**Sequence(s):**", seq_time)
+        # st.subheader("Respiratory Rate Plot")
+        # plot_grid(PP_bpm, "Resp Rate Plot", jenis="pp", kolom="1", timev=sequence_time)
 
 
-        st.header("Threshold for HRV")
+        st.subheader("Threshold for HRV")
         absdat = {}
         mav = {}
         thresout = {}
@@ -897,7 +926,7 @@ def main():
         plot_grid(HR, "HRV Plot", jenis="hrv", kolom="1", timev=sequence_time)
         plot_grid(RR_intervals, "RR Plot", jenis="rr", kolom="1", timev=sequence_time)
 
-        st.header("Analisis Time Domain")
+        st.subheader("Analisis Time Domain")
 
         # Pastikan RR_intervals adalah list biasa
         RR_intervals = np.array(RR_intervals)
@@ -944,7 +973,7 @@ def main():
         with col1:
             st.pyplot(fig)
 
-        st.header("Analisis Frekuensi Domain")
+        st.subheader("Analisis Domain Frekuensi")
 
         # --- Interpolasi ke 4 Hz (sampling uniform) ---
         def interpolate(rr_intervals, fs_interp=4):
@@ -1071,7 +1100,8 @@ def main():
             st.pyplot(fig)
 
 
-        st.header("Analisis Non Linear")
+        st.subheader("Analisis Non Linear")
+        # results = pyhrv.nonlinear.poincare(nni=RR_intervals)
         results = pyhrv.nonlinear.poincare(nni=RR_intervals, show=False)
         fig = plt.gcf()
 
