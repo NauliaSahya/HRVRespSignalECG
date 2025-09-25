@@ -45,18 +45,13 @@ def dirac(x):
             return dirac_delta
 
 def read_data(filepath, type="ecg"):
-    data = []
-    a = 5 if type=="ecg" else 1
+    a = 5 if type == "ecg" else 1
     try:
-        with open(filepath) as file:
-            lines = csv.reader(file, delimiter='\t')
-            next(lines)
-            next(lines)
-            for column in lines:
-                data.append(float(column[a]))
+        df = pd.read_csv(filepath, delim_whitespace=True, skiprows=2)
+        return df.iloc[:, a].to_numpy()
     except Exception as e:
         st.error(f"Error membaca file: {e}")
-    return np.array(data)
+        return np.array([])
 
 
 def hg_list():
@@ -1112,5 +1107,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
