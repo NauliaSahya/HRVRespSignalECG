@@ -557,7 +557,7 @@ def compute_hr(RR_intervals):
 
 def main():
     st.sidebar.title("Non Stationary Signal 📚")
-    selected_option = st.sidebar.selectbox("Choose an option", ["HRV dan Resp Signal", "Mallat Algorithm Theory", "Filter Bank Theory"])
+    selected_option = st.sidebar.selectbox("Choose an option", ["Mallat Algorithm Theory", "Filter Bank Theory", "HRV dan Resp Signal"])
     ecg = read_data('samples5min.txt')
     resp = read_data('samples5min.txt', type="resp") 
 
@@ -1112,4 +1112,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
